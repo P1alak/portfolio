@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shell Game with Sound</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      /* background: linear-gradient(135deg, #d0f0f8, #ffffff); */
+      padding: 40px;
+      overflow-x: hidden;
+      background-color: black
+    }
+
+    h1 {
+      color: white;
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+
+    .game-container {
+      position: relative;
+      width: 390px;
+      margin: 0 auto;
+      height: 220px;
+    }
+
+    .glass {
+      width: 100px;
+      height: 150px;
+      background: radial-gradient(circle, #eee 30%, #bbb);
+      border: 5px solid #444;
+      border-radius: 20px 20px 0 0;
+      position: absolute;
+      bottom: 0;
+      transition: left 0.8s ease-in-out, bottom 0.3s ease;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .glass.lift {
+      bottom: 40px;
+      transform: scale(1.05);
+    }
+
+    .ball {
+      width: 40px;
+      height: 40px;
+      background-color: #e53935;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      display: none;
+      z-index: 1;
+      transition: left 0.8s ease-in-out;
+      box-shadow: 0 0 12px #e53935;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    #message {
+      margin-top: 30px;
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    button {
+      margin-top: 25px;
+      padding: 12px 24px;
+      font-size: px;
+      cursor: pointer;
+      background: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    button:hover {
+      background: #004d40;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎩 Fancy Shell Game: Where's the Ball?</h1>
+
+  <div class="game-container">
+    <div class="ball" id="ball"></div>
+    <div class="glass" id="glass0" onclick="guess(0)" style="left: 0px;"></div>
+    <div class="glass" id="glass1" onclick="guess(1)" style="left: 130px;"></div>
+    <div class="glass" id="glass2" onclick="guess(2)" style="left: 260px;"></div>
+  </div><br>
+
+  <div id="message">Click “Start Game” to begin!</div><br><br>
+  <button onclick="startGame()">🔁 Start Game</button>
+
+  <audio id="shuffleSound" src="https://cdn.jsdelivr.net/gh/jstewart5/sounds@main/shuffle.mp3" preload="auto"></audio>
+  <audio id="correctSound" src="https://cdn.jsdelivr.net/gh/jstewart5/sounds@main/correct.mp3" preload="auto"></audio>
+  <audio id="wrongSound" src="https://cdn.jsdelivr.net/gh/jstewart5/sounds@main/wrong.mp3" preload="auto"></audio>
+
+  <script>
+    const positions = [0, 130, 260];
+    const glasses = [document.getElementById("glass0"), document.getElementById("glass1"), document.getElementById("glass2")];
+    const ball = document.getElementById("ball");
+    const message = document.getElementById("message");
+
+    const shuffleSound = document.getElementById("shuffleSound");
+    const correctSound = document.getElementById("correctSound");
+    const wrongSound = document.getElementById("wrongSound");
+
+    let ballUnder = 0;
+    let shuffling = false;
+    let audioAllowed = false;
+
+    function playSound(sound) {
+      if (audioAllowed && sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.warn("Audio play error:", e));
+      }
+    }
+
+    function startGame() {
+      audioAllowed = true;
+
+      shuffleSound.play().then(() => {
+        shuffleSound.pause();
+        shuffleSound.currentTime = 0;
+      });
+
+     
+      ballUnder = Math.floor(Math.random() * 3);
+      shuffling = true;
+      message.textContent = "Showing ball, then shuffling...";
+
+     
+      glasses.forEach((glass, i) => {
+        glass.style.left = positions[i] + "px";
+        glass.classList.remove("lift");
+      });
+
+      ball.style.display = "block";
+      ball.style.left = positions[ballUnder] + 30 + "px";
+
+      setTimeout(() => {
+        ball.style.display = "none";
+        shuffle(6);
+      }, 1500);
+    }
+
+    function shuffle(times) {
+  if (times === 0) {
+    shuffling = false;
+    message.textContent = "Now guess where the ball is!";
+    return;
+  }
+
+  playSound(shuffleSound);
+
+  let a = Math.floor(Math.random() * 3);
+  let b;
+  do {
+    b = Math.floor(Math.random() * 3);
+  } while (a === b);
+
+  // Swap only their positions, not the array elements
+  const posA = glasses[a].style.left;
+  const posB = glasses[b].style.left;
+  glasses[a].style.left = posB;
+  glasses[b].style.left = posA;
+
+  
+  if (ballUnder === a) {
+    ballUnder = b;
+  } else if (ballUnder === b) {
+    ballUnder = a;
+  }
+
+  setTimeout(() => shuffle(times - 1), 800);
+}
+function guess(choice) {
+  if (shuffling) {
+    message.textContent = "⏳ Please wait for shuffling to finish!";
+    return;
+  }
+
+  glasses[choice].classList.add("lift");
+
+  setTimeout(() => {
+    if (choice === ballUnder) {
+      message.textContent = "🎉 Correct! You found the ball!";
+      playSound(correctSound);
+    } else {
+      message.textContent = `❌ Nope! It was under glass ${ballUnder + 1}`;
+      playSound(wrongSound);
+    }
+
+    ball.style.display = "block";
+    ball.style.left = positions[ballUnder] + 30 + "px";
+
+    setTimeout(() => {
+      glasses.forEach(g => g.classList.remove("lift"));
+    }, 1200);
+  }, 600);
+}
+
+
+  </script>
+</body>
+</html>
